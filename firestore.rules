@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) || request.auth.token.email == 'legendryfx101@gmail.com');
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidForexAnalysis(data) {
+      return data.keys().hasAll(['userId', 'pair', 'signal', 'explanation', 'confidence'])
+        && data.keys().hasOnly([
+          'userId', 'pair', 'signal', 'explanation', 'confidence',
+          'entry_price', 'take_profit_1', 'take_profit_2', 'take_profit_3',
+          'stop_loss', 'analysis_type', 'timeframe', 'image_url',
+          'journal_notes', 'trade_outcome', 'pnl_amount', 'createdAt'
+        ])
+        && data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128
+        && data.pair is string && data.pair.size() > 0 && data.pair.size() <= 32
+        && (data.signal == 'BUY' || data.signal == 'SELL' || data.signal == 'HOLD')
+        && data.explanation is string && data.explanation.size() > 0 && data.explanation.size() <= 10000
+        && (data.confidence == 'High' || data.confidence == 'Medium' || data.confidence == 'Low')
+        && (!('entry_price' in data) || (data.entry_price is string && data.entry_price.size() <= 64))
+        && (!('take_profit_1' in data) || (data.take_profit_1 is string && data.take_profit_1.size() <= 64))
+        && (!('take_profit_2' in data) || (data.take_profit_2 is string && data.take_profit_2.size() <= 64))
+        && (!('take_profit_3' in data) || (data.take_profit_3 is string && data.take_profit_3.size() <= 64))
+        && (!('stop_loss' in data) || (data.stop_loss is string && data.stop_loss.size() <= 64))
+        && (!('analysis_type' in data) || (data.analysis_type is string && data.analysis_type.size() <= 64))
+        && (!('timeframe' in data) || (data.timeframe is string && data.timeframe.size() <= 32))
+        && (!('image_url' in data) || (data.image_url is string && data.image_url.size() <= 2000000))
+        && (!('journal_notes' in data) || (data.journal_notes is string && data.journal_notes.size() <= 10000))
+        && (!('trade_outcome' in data) || (data.trade_outcome in ['WIN', 'LOSS', 'BREAKEVEN', 'PENDING']))
+        && (!('pnl_amount' in data) || (data.pnl_amount is string && data.pnl_amount.size() <= 64))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    function isValidWatchlistItem(data) {
+      return data.keys().hasAll(['userId', 'pair', 'addedAt'])
+        && data.keys().hasOnly(['userId', 'pair', 'addedAt', 'category'])
+        && data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128
+        && data.pair is string && data.pair.size() > 0 && data.pair.size() <= 32
+        && (!('category' in data) || (data.category is string && data.category.size() <= 32))
+        && data.addedAt is string && data.addedAt.size() <= 64;
+    }
+
+    function isValidPersonalTrade(data) {
+      return data.keys().hasAll(['userId', 'pair', 'direction', 'createdAt'])
+        && data.keys().hasOnly([
+          'userId', 'pair', 'direction', 'category', 'lotSize',
+          'entryPrice', 'exitPrice', 'stopLoss', 'takeProfit',
+          'outcome', 'pnlAmount', 'broker', 'strategy',
+          'notes', 'executionDate', 'createdAt'
+        ])
+        && data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128
+        && data.pair is string && data.pair.size() > 0 && data.pair.size() <= 32
+        && (data.direction == 'BUY' || data.direction == 'SELL')
+        && (!('category' in data) || (data.category is string && data.category.size() <= 32))
+        && (!('lotSize' in data) || (data.lotSize is string && data.lotSize.size() <= 64))
+        && (!('entryPrice' in data) || (data.entryPrice is string && data.entryPrice.size() <= 64))
+        && (!('exitPrice' in data) || (data.exitPrice is string && data.exitPrice.size() <= 64))
+        && (!('stopLoss' in data) || (data.stopLoss is string && data.stopLoss.size() <= 64))
+        && (!('takeProfit' in data) || (data.takeProfit is string && data.takeProfit.size() <= 64))
+        && (!('outcome' in data) || (data.outcome in ['WIN', 'LOSS', 'BREAKEVEN', 'OPEN']))
+        && (!('pnlAmount' in data) || (data.pnlAmount is string && data.pnlAmount.size() <= 64))
+        && (!('broker' in data) || (data.broker is string && data.broker.size() <= 64))
+        && (!('strategy' in data) || (data.strategy is string && data.strategy.size() <= 128))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 10000))
+        && (!('executionDate' in data) || (data.executionDate is string && data.executionDate.size() <= 64))
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    match /forex_analyses/{analysisId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(analysisId) && isValidForexAnalysis(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().userId == existing().userId;
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /watchlist/{itemId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidWatchlistItem(incoming());
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /personal_trades/{tradeId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidPersonalTrade(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidPersonalTrade(incoming()) && incoming().userId == existing().userId;
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.token.email == 'legendryfx101@gmail.com');
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin() || request.auth.token.email == 'legendryfx101@gmail.com';
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+  }
+}

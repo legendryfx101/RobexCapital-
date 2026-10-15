@@ -1,0 +1,6 @@
+{
+  "name": "RobexCapital",
+  "description": "AI RobexCapital Signal Analyzer that decodes chart screenshots and provides instant trading signals with entry points, take profit targets, and stop loss levels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

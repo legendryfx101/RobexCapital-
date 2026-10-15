@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "ForexAnalysis": {
+      "title": "ForexAnalysis",
+      "description": "AI-generated trading signal and technical analysis for a forex chart",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The user ID of the owner",
+          "maxLength": 128
+        },
+        "pair": {
+          "type": "string",
+          "description": "The forex pair being analyzed",
+          "maxLength": 32
+        },
+        "signal": {
+          "type": "string",
+          "enum": ["BUY", "SELL", "HOLD"],
+          "description": "Trading signal - prefer BUY or SELL over HOLD"
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Detailed explanation with specific chart observations and justification for the signal",
+          "maxLength": 5000
+        },
+        "entry_price": {
+          "type": "string",
+          "description": "Specific entry price level",
+          "maxLength": 64
+        },
+        "take_profit_1": {
+          "type": "string",
+          "description": "First conservative take profit level",
+          "maxLength": 64
+        },
+        "take_profit_2": {
+          "type": "string",
+          "description": "Second moderate take profit level",
+          "maxLength": 64
+        },
+        "take_profit_3": {
+          "type": "string",
+          "description": "Third aggressive take profit level",
+          "maxLength": 64
+        },
+        "stop_loss": {
+          "type": "string",
+          "description": "Stop loss level for risk management",
+          "maxLength": 64
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["High", "Medium", "Low"],
+          "description": "Confidence in the signal"
+        },
+        "analysis_type": {
+          "type": "string",
+          "description": "Type of analysis performed",
+          "maxLength": 64
+        },
+        "timeframe": {
+          "type": "string",
+          "description": "Trading timeframe identified",
+          "maxLength": 32
+        },
+        "image_url": {
+          "type": "string",
+          "description": "Chart image preview data URL or storage URL",
+          "maxLength": 2000000
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp ISO string"
+        }
+      },
+      "required": ["userId", "pair", "signal", "explanation", "confidence"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Application user profile",
+      "type": "object",
+      "properties": {
+        "lastActive": {
+          "type": "string",
+          "description": "Last activity timestamp"
+        }
+      },
+      "required": ["lastActive"]
+    }
+  },
+  "firestore": {
+    "/forex_analyses/{analysisId}": {
+      "schema": {
+        "$ref": "#/entities/ForexAnalysis"
+      },
+      "description": "Collection of forex chart trading analyses belonging to users"
+    },
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "User profiles"
+    }
+  }
+}
